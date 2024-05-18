@@ -37,29 +37,11 @@ source distribution.
 #include <string>
 #include <iostream>
 #include <cassert>
+#include <chrono>
+#include <thread>
 
 namespace
 {
-//    const std::string ShaderVertex =
-//R"(
-//ATTRIBUTE vec2 a_position;
-//ATTRIBUTE vec2 a_texCoord0;
-//ATTRIBUTE vec4 a_colour;
-//
-//uniform mat4 u_worldMatrix;
-//uniform mat4 u_projectionMatrix;
-//
-//VARYING_OUT vec2 v_texCoord;
-//VARYING_OUT vec4 v_colour;
-//
-//void main()
-//{
-//    gl_Position = u_projectionMatrix * u_worldMatrix * vec4(a_position, 0.0, 1.0);
-//    v_texCoord = vec2(a_texCoord0.x, 1.0 - a_texCoord0.y);
-//    v_colour = a_colour;
-//})";
-
-
     //shader based on example at https://github.com/phoboslab/pl_mpeg
     const std::string ShaderFragment =
         R"(
@@ -101,8 +83,8 @@ void Detail::videoCallback(plm_t* mpg, plm_frame_t* frame, void* user)
 
 void Detail::audioCallback(plm_t*, plm_samples_t* samples, void* user)
 {
-    /*auto* videoPlayer = static_cast<VideoTexture*>(user);
-    videoPlayer->m_audioStream.pushData(samples->interleaved);*/   
+    auto* videoPlayer = static_cast<VideoTexture*>(user);
+    videoPlayer->m_audioStream.pushData(samples->interleaved);   
 }
 
 VideoTexture::VideoTexture()
@@ -113,7 +95,8 @@ VideoTexture::VideoTexture()
     m_state             (State::Stopped)
 {
     //TODO we don't really want to create a shader for EVERY instance
-    //but on the other hand we're unlikelt to play a lot of videos at once?
+    //in an ideal world we'd create a single instance and pass it in here
+    //but on the other hand we're unlikely to play a lot of videos at once?
 
     if (!m_shader.loadFromMemory(ShaderFragment, sf::Shader::Fragment))
     {
@@ -196,9 +179,9 @@ bool VideoTexture::loadFromFile(const std::string& path)
     plm_set_video_decode_callback(m_plm, Detail::videoCallback, this);
 
     //enable audio
-    //plm_set_audio_decode_callback(m_plm, audioCallback, this);
+    plm_set_audio_decode_callback(m_plm, Detail::audioCallback, this);
 
-    /*if (plm_get_num_audio_streams(m_plm) > 0)
+    if (plm_get_num_audio_streams(m_plm) > 0)
     {
         auto sampleRate = plm_get_samplerate(m_plm);
         m_audioStream.init(ChannelCount, sampleRate);
@@ -209,7 +192,7 @@ bool VideoTexture::loadFromFile(const std::string& path)
     else
     {
         m_audioStream.hasAudio = false;
-    }*/
+    }
 
     plm_set_loop(m_plm, m_looped ? 1 : 0);
 
@@ -269,10 +252,10 @@ void VideoTexture::play()
     m_timeAccumulator = 0.f;
     m_state = State::Playing;
     
-    /*if (m_audioStream.hasAudio)
+    if (m_audioStream.hasAudio)
     {
         m_audioStream.play();
-    }*/
+    }
 }
 
 void VideoTexture::pause()
@@ -280,7 +263,7 @@ void VideoTexture::pause()
     if (m_state == State::Playing)
     {
         m_state = State::Paused;
-        //m_audioStream.pause();
+        m_audioStream.pause();
     }
 }
 
@@ -289,7 +272,7 @@ void VideoTexture::stop()
     if (m_state != State::Stopped)
     {
         m_state = State::Stopped;
-        //m_audioStream.stop();
+        m_audioStream.stop();
 
         if (m_plm)
         {
@@ -347,78 +330,82 @@ void VideoTexture::setLooped(bool looped)
 //private
 void VideoTexture::updateTexture(sf::Texture& t, plm_plane_t* plane)
 {
-    /*CRO_ASSERT(textureID != 0, "");*/
+    /*
+    Planes only contain a single colour channel so we have to use OpenGL
+    directly to update the texture (SFML doesn'r expose this). If you get
+    linker errors here make sure to link opengl32.lib on Windows
+    */
+
+    assert(t.getNativeHandle());
     glBindTexture(GL_TEXTURE_2D, t.getNativeHandle());
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, plane->width, plane->height, 0, GL_RED, GL_UNSIGNED_BYTE, plane->data);
 }
 
 void VideoTexture::updateBuffer()
 {
-    //remaining shader setup is handled by SimpleQuad
-    /*glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, m_cr.getGLHandle());
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, m_cb.getGLHandle());*/
-
     m_outputBuffer.clear();
     m_outputBuffer.draw(m_quad, &m_shader);
     m_outputBuffer.display();
 }
 
-//bool VideoTexture::AudioStream::onGetData(cro::SoundStream::Chunk& chunk)
-//{
-//    const auto getChunkSize = [&]()
-//    {
-//        auto in = static_cast<std::int32_t>(m_bufferIn);
-//        auto out = static_cast<std::int32_t>(m_bufferOut);
-//        auto chunkSize = (in - out) + static_cast<std::int32_t>(m_inBuffer.size());
-//        chunkSize %= m_inBuffer.size();
-//
-//        chunkSize = std::min(chunkSize, static_cast<std::int32_t>(m_outBuffer.size()));
-//
-//        return chunkSize;
-//    };
-//
-//
-//    auto chunkSize = getChunkSize();
-//
-//    //wait for the buffer to fill
-//    while (chunkSize == 0
-//        && getStatus() == AudioStream::Status::Playing)
-//    {
-//        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-//        chunkSize = getChunkSize();
-//    }
-//
-//    for (auto i = 0; i < chunkSize; ++i)
-//    {
-//        auto idx = (m_bufferOut + i) % m_inBuffer.size();
-//        m_outBuffer[i] = m_inBuffer[idx];
-//    }
-//
-//    chunk.sampleCount = chunkSize;
-//    chunk.samples = m_outBuffer.data();
-//
-//    m_bufferOut = (m_bufferOut + chunkSize) % m_inBuffer.size();
-//
-//    return true;
-//}
-//
-//void VideoTexture::AudioStream::init(std::uint32_t channels, std::uint32_t sampleRate)
-//{
-//    stop();
-//    initialise(channels, sampleRate, 0);
-//}
-//
-//void VideoTexture::AudioStream::pushData(float* data)
-//{
-//    for (auto i = 0u; i < AudioBufferSize; ++i)
-//    {
-//        auto index = (m_bufferIn + i) % m_inBuffer.size();
-//
-//        std::int16_t sample = data[i] * std::numeric_limits<std::int16_t>::max();
-//        m_inBuffer[index] = sample;
-//    }
-//
-//    m_bufferIn = (m_bufferIn + AudioBufferSize) % m_inBuffer.size();
-//}
+
+/*
+Audio Stream....
+*/
+bool VideoTexture::AudioStream::onGetData(sf::SoundStream::Chunk& chunk)
+{
+    const auto getChunkSize = [&]()
+    {
+        auto in = static_cast<std::int32_t>(m_bufferIn);
+        auto out = static_cast<std::int32_t>(m_bufferOut);
+        auto chunkSize = (in - out) + static_cast<std::int32_t>(m_inBuffer.size());
+        chunkSize %= m_inBuffer.size();
+
+        chunkSize = std::min(chunkSize, static_cast<std::int32_t>(m_outBuffer.size()));
+
+        return chunkSize;
+    };
+
+
+    auto chunkSize = getChunkSize();
+
+    //wait for the buffer to fill
+    while (chunkSize == 0
+        && getStatus() == AudioStream::Status::Playing)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        chunkSize = getChunkSize();
+    }
+
+    for (auto i = 0; i < chunkSize; ++i)
+    {
+        auto idx = (m_bufferOut + i) % m_inBuffer.size();
+        m_outBuffer[i] = m_inBuffer[idx];
+    }
+
+    chunk.sampleCount = chunkSize;
+    chunk.samples = m_outBuffer.data();
+
+    m_bufferOut = (m_bufferOut + chunkSize) % m_inBuffer.size();
+
+    return true;
+}
+
+void VideoTexture::AudioStream::init(std::uint32_t channels, std::uint32_t sampleRate)
+{
+    stop();
+    initialize(channels, sampleRate);
+}
+
+void VideoTexture::AudioStream::pushData(float* data)
+{
+    for (auto i = 0u; i < AudioBufferSize; ++i)
+    {
+        auto index = (m_bufferIn + i) % m_inBuffer.size();
+
+        std::int16_t sample = data[i] * std::numeric_limits<std::int16_t>::max();
+        m_inBuffer[index] = sample;
+    }
+
+    m_bufferIn = (m_bufferIn + AudioBufferSize) % m_inBuffer.size();
+}

@@ -29,12 +29,15 @@ source distribution.
 
 #pragma once
 
+#include <SFML/Audio/SoundStream.hpp>
+
 #include <SFML/graphics/Shader.hpp>
 #include <SFML/graphics/Texture.hpp>
 #include <SFML/graphics/RenderTexture.hpp>
 #include <SFML/graphics/Sprite.hpp>
 
 #include <vector>
+#include <array>
 
 struct plm_t;
 typedef plm_t plm_t;
@@ -67,7 +70,7 @@ Usage:
 VideoTexture is designed to work similarly to RenderTexture and
 can be used with any SFML drawable type which supports textures.
 
-You must, however, continue to update the VideoTexture regulaly
+You must, however, continue to update the VideoTexture regularly
 with the elapsed time in order to progress playback. See 
 VideoTexture::update().
 
@@ -193,13 +196,13 @@ private:
     void updateBuffer();
 
 
-    /*class AudioStream final : public cro::SoundStream
+    class AudioStream final : public sf::SoundStream
     {
     public:
         bool hasAudio = false;
 
-        bool onGetData(cro::SoundStream::Chunk&) override;
-        void onSeek(std::int32_t) override {}
+        bool onGetData(sf::SoundStream::Chunk&) override;
+        void onSeek(sf::Time) override {}
 
         void init(std::uint32_t channels, std::uint32_t sampleRate);
 
@@ -213,7 +216,7 @@ private:
         std::uint32_t m_bufferIn = SAMPLES_PER_FRAME * 6;
         std::uint32_t m_bufferOut = 2;
 
-    }m_audioStream;*/
+    }m_audioStream;
 
     //because function pointers
     friend void Detail::videoCallback(plm_t*, plm_frame_t*, void*);
