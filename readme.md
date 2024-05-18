@@ -5,8 +5,8 @@ Example for using [pl_mpeg](https://github.com/phoboslab/pl_mpeg) to decode mpg1
 
 
 
-######Usage
-Add the files in `src` to your SFML project. tHen do something like:
+###### Usage
+Add the files in `src` to your SFML project. Then do something like:
 
     #include "src/VideoTexture.hpp"
 
