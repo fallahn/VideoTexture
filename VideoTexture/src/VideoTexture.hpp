@@ -31,13 +31,14 @@ source distribution.
 
 #include <SFML/Audio/SoundStream.hpp>
 
-#include <SFML/graphics/Shader.hpp>
-#include <SFML/graphics/Texture.hpp>
-#include <SFML/graphics/RenderTexture.hpp>
-#include <SFML/graphics/Sprite.hpp>
+#include <SFML/Graphics/Shader.hpp>
+#include <SFML/Graphics/Texture.hpp>
+#include <SFML/Graphics/RenderTexture.hpp>
+#include <SFML/Graphics/Sprite.hpp>
 
 #include <vector>
 #include <array>
+#include <cstdint>
 
 struct plm_t;
 typedef plm_t plm_t;

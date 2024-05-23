@@ -29,7 +29,7 @@ source distribution.
 
 #include "src/VideoTexture.hpp"
 
-#include <SFML/graphics.hpp>
+#include <SFML/Graphics.hpp>
 
 
 int main()

@@ -332,8 +332,8 @@ void VideoTexture::updateTexture(sf::Texture& t, plm_plane_t* plane)
 {
     /*
     Planes only contain a single colour channel so we have to use OpenGL
-    directly to update the texture (SFML doesn'r expose this). If you get
-    linker errors here make sure to link opengl32.lib on Windows
+    directly to update the texture (SFML doesn't expose this). If you get
+    linker errors here make sure to link opengl
     */
 
     assert(t.getNativeHandle());
