@@ -6,7 +6,7 @@ Example for using [pl_mpeg](https://github.com/phoboslab/pl_mpeg) to decode mpg1
 
 
 ###### Usage
-Add the files in `src` to your SFML project. Then do something like:
+Add the files in `src` to your SFML project and link to OpenGL. Then do something like:
 
     #include "src/VideoTexture.hpp"
 
